@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import com.example.chesslibgame.R
 import androidx.compose.ui.tooling.preview.Preview
-import com.google.firebase.auth.FirebaseAuth
 
 
 @Composable
