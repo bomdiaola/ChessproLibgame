@@ -1,12 +1,12 @@
 package com.example.chesslibgame.ui.screens
 
+import android.util.Log
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,16 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import com.example.chesslibgame.R
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.tooling.preview.Preview
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun RegisterScreen(auth: FirebaseAuth, onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
@@ -33,6 +32,7 @@ fun RegisterScreen(auth: FirebaseAuth, onRegisterSuccess: () -> Unit, onBackToLo
     var confirmPassword by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var registerError by remember { mutableStateOf<String?>(null) }
+    val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     // Animación de colores para el fondo
     val infiniteTransition = rememberInfiniteTransition(label = "")
@@ -80,7 +80,6 @@ fun RegisterScreen(auth: FirebaseAuth, onRegisterSuccess: () -> Unit, onBackToLo
                 modifier = Modifier.size(300.dp)
             )
 
-
             // Input para el email
             CustomTextFieldWithBottomLine(
                 value = email,
@@ -126,7 +125,22 @@ fun RegisterScreen(auth: FirebaseAuth, onRegisterSuccess: () -> Unit, onBackToLo
                             .addOnCompleteListener { task ->
                                 isLoading = false
                                 if (task.isSuccessful) {
-                                    onRegisterSuccess()
+                                    val userId = auth.currentUser?.uid
+                                    val user = hashMapOf(
+                                        "userId" to userId,
+                                        "email" to email
+                                    )
+                                    // Guardar el usuario en Firestore
+                                    userId?.let {
+                                        db.collection("users").document(it).set(user)
+                                            .addOnSuccessListener {
+                                                Log.d("Register", "Usuario guardado en Firestore")
+                                                onRegisterSuccess()
+                                            }
+                                            .addOnFailureListener { e ->
+                                                registerError = "Error al guardar usuario: ${e.message}"
+                                            }
+                                    }
                                 } else {
                                     registerError = task.exception?.message
                                 }
@@ -164,7 +178,7 @@ fun RegisterScreen(auth: FirebaseAuth, onRegisterSuccess: () -> Unit, onBackToLo
                 ),
                 border = BorderStroke(1.dp, Color.White)
             ) {
-                Text("Back to Login", fontWeight = FontWeight.Bold)
+                Text("Atrás", fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -180,13 +194,11 @@ fun CustomTextFieldWithBottomLine(
     visualTransformation: VisualTransformation = VisualTransformation.None
 ) {
     Column {
-
         Text(
             text = label,
             color = Color.White,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-
         TextField(
             value = value,
             onValueChange = onValueChange,
@@ -212,6 +224,5 @@ fun CustomTextFieldWithBottomLine(
 @Composable
 fun PreviewRegisterScreen() {
     val fakeAuth = FirebaseAuth.getInstance()
-
     RegisterScreen(auth = fakeAuth, onRegisterSuccess = {}, onBackToLogin = {})
 }

@@ -1,3 +1,5 @@
+package com.example.chesslibgame.ui.screens
+
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -5,7 +7,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,9 +21,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import com.example.chesslibgame.R
 import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.chesslibgame.ui.screens.CustomTextFieldWithBottomLine
-import androidx.compose.foundation.clickable
 import androidx.navigation.NavController
 
 @Composable
@@ -109,7 +107,8 @@ fun Login(auth: FirebaseAuth, onLoginSuccess: () -> Unit, navController: NavCont
                         .addOnCompleteListener { task ->
                             isLoading = false
                             if (task.isSuccessful) {
-                                onLoginSuccess()
+                                // Redirigir a la página del tablero de ajedrez si el login es correcto
+                                navController.navigate("game_mode")
                             } else {
                                 loginError = task.exception?.message
                             }

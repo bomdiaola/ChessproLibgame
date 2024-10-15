@@ -1,30 +1,32 @@
 package com.example.chesslibgame.ui.screens
 
+import android.content.Context
+import android.media.MediaPlayer
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.chesslibgame.R
 import com.example.chesslibgame.logic.ChessGame
 import com.example.chesslibgame.ui.theme.ChessLibGameTheme
 import com.github.bhlangonijr.chesslib.Piece
 import com.github.bhlangonijr.chesslib.Square
+import com.github.bhlangonijr.chesslib.move.Move
 
 @Composable
-fun ChessBoardScreen(chessGame: ChessGame = ChessGame()) {
+fun ChessBoardScreen(navController: NavController, chessGame: ChessGame = ChessGame()) {
+    val context = LocalContext.current
     var selectedSquare by remember { mutableStateOf<Square?>(null) }
     var boardState by remember { mutableStateOf(chessGame.getBoardFEN()) }
 
@@ -35,9 +37,6 @@ fun ChessBoardScreen(chessGame: ChessGame = ChessGame()) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Encabezado de jugadores y temporizador
-        PlayerHeader()
-
         Spacer(modifier = Modifier.height(70.dp))
 
         // Tablero de ajedrez con borde redondeado
@@ -49,73 +48,75 @@ fun ChessBoardScreen(chessGame: ChessGame = ChessGame()) {
             contentAlignment = Alignment.Center
         ) {
             ChessBoard(chessGame, selectedSquare, onSquareClick = { square ->
+                val pieceAtSelectedSquare = chessGame.getPieceAt(square)
+
+                // Verificar si la casilla seleccionada está vacía
                 if (selectedSquare == null) {
-                    selectedSquare = square
+                    // Solo selecciona la casilla si hay una pieza
+                    if (pieceAtSelectedSquare != Piece.NONE) {
+                        selectedSquare = square
+                    }
                 } else {
                     val from = selectedSquare!!
                     val to = square
-                    if (chessGame.makeMove(from, to)) {
-                        boardState = chessGame.getBoardFEN()
+
+                    // Verificar si hay una pieza en la casilla de origen
+                    val piece = chessGame.getPieceAt(from)
+                    if (piece != Piece.NONE) {
+                        // Lógica adicional para restringir la captura del peón
+                        if (piece == Piece.WHITE_PAWN || piece == Piece.BLACK_PAWN) {
+                            if (isPawnMoveValid(from, to, chessGame)) {
+                                // Realizar el movimiento en el tablero
+                                val move = Move(from, to)
+                                if (chessGame.board.isMoveLegal(move, true)) {
+                                    chessGame.board.doMove(move)
+                                    boardState = chessGame.board.fen
+                                    playMoveSound(context)
+                                }
+                            }
+                        } else {
+                            // Crear un movimiento en ChessLib y verificar si es válido para las demás piezas
+                            val move = Move(from, to)
+                            if (chessGame.board.isMoveLegal(move, true)) {
+                                chessGame.board.doMove(move)
+                                boardState = chessGame.board.fen
+                                playMoveSound(context)
+                            }
+                        }
                     }
+
+                    // Desmarcar la casilla seleccionada después del movimiento
                     selectedSquare = null
                 }
             })
         }
-        // Botones "Offer Draw" y "Resign"
+
         Spacer(modifier = Modifier.height(70.dp))
-        GameOptions()
     }
 }
 
-@Composable
-fun PlayerHeader() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Jugador 1
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(
-                painter = painterResource(id = R.drawable.player_1), // Imagen del jugador 1
-                contentDescription = null,
-                modifier = Modifier.size(64.dp).clip(CircleShape)
-            )
-            Text("Player 1", color = Color.White, fontSize = 16.sp)
-            Text("Level 2", color = Color.Gray, fontSize = 14.sp)
-        }
+// Función para verificar si el movimiento del peón es válido (especialmente para capturas diagonales)
+fun isPawnMoveValid(from: Square, to: Square, chessGame: ChessGame): Boolean {
+    val pieceAtDestination = chessGame.getPieceAt(to)
 
-        // Temporizador
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("00:45", color = Color.White, fontSize = 24.sp)
-        }
+    // Verificar si es una captura en diagonal
+    val isDiagonalCapture = (from.file.ordinal != to.file.ordinal) && (pieceAtDestination != Piece.NONE)
 
-        // Jugador 2
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(
-                painter = painterResource(id = R.drawable.player_2), // Imagen del jugador 2
-                contentDescription = null,
-                modifier = Modifier.size(64.dp).clip(CircleShape)
-            )
-            Text("Player 2", color = Color.White, fontSize = 16.sp)
-            Text("Level 2", color = Color.Gray, fontSize = 14.sp)
-        }
+    // Verificar que sea un movimiento hacia adelante para los peones
+    val isForwardMove = if (chessGame.getPieceAt(from) == Piece.WHITE_PAWN) {
+        to.rank.ordinal == from.rank.ordinal + 1
+    } else {
+        to.rank.ordinal == from.rank.ordinal - 1
     }
+
+    // Permitimos el movimiento si es una captura diagonal o un movimiento normal hacia adelante
+    return (isDiagonalCapture && isForwardMove) || (from.file.ordinal == to.file.ordinal && pieceAtDestination == Piece.NONE && isForwardMove)
 }
 
-@Composable
-fun GameOptions() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        Button(onClick = { /* Acción de Offer Draw */ }) {
-            Text("Offer Draw")
-        }
-        Button(onClick = { /* Acción de Resign */ }) {
-            Text("Resign")
-        }
-    }
+// Función para reproducir el sonido
+fun playMoveSound(context: Context) {
+    val mediaPlayer = MediaPlayer.create(context, R.raw.move_self)
+    mediaPlayer?.start()
 }
 
 @Composable
@@ -169,7 +170,6 @@ fun ChessSquare(
     }
 }
 
-
 fun getPieceImage(piece: Piece?): Int? {
     return when (piece) {
         Piece.WHITE_PAWN -> R.drawable.pawn_piece_w
@@ -192,6 +192,6 @@ fun getPieceImage(piece: Piece?): Int? {
 @Composable
 fun PreviewChessBoardScreen() {
     ChessLibGameTheme {
-        ChessBoardScreen(chessGame = ChessGame().apply { resetBoard() })
+        ChessBoardScreen(navController = NavController(LocalContext.current), chessGame = ChessGame().apply { resetBoard() })
     }
 }

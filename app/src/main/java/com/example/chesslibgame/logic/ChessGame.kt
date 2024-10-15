@@ -8,7 +8,7 @@ import com.github.bhlangonijr.chesslib.Piece  // Importa desde el paquete correc
 
 class ChessGame {
 
-    private val board: Board = Board()
+    val board: Board = Board()
 
     // Resetea el tablero al estado inicial
     fun resetBoard() {

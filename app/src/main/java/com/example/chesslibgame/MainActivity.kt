@@ -1,6 +1,6 @@
 package com.example.chesslibgame
 
-import Login
+import com.example.chesslibgame.ui.screens.Login
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,6 +28,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.composable
 import com.example.chesslibgame.ui.screens.RegisterScreen
 import com.example.chesslibgame.ui.screens.StartSc
+import com.example.chesslibgame.ui.screens.GameModeScreen
+import com.example.chesslibgame.ui.screens.ChessBoardScreen
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,7 +68,7 @@ fun AppNavigator(modifier: Modifier = Modifier) {
         // Pantalla de login
         composable("login") {
             Login(auth = FirebaseAuth.getInstance(), onLoginSuccess = {
-                // Lógica del login exitoso
+                navController.navigate("game_mode")
             }, navController = navController)
         }
 
@@ -83,13 +86,30 @@ fun AppNavigator(modifier: Modifier = Modifier) {
                 }
             )
         }
+        // Pantalla de selección de modos de juego
+        composable("game_mode") {
+            GameModeScreen(navController = navController)
+        }
+        composable("play_online") {
+            Text(text = "Play Online Mode")
+        }
+        composable("play_bots") {
+            Text(text = "Play Bots Mode")
+        }
+        // Pantalla de "Play a friend"
+        composable("play_friend") {
+            Text(text = "Play a Friend Mode")  // Elimina la navegación interna
+        }
+        // Pantalla de ChessBoard
+        composable("chessBoard") {
+            ChessBoardScreen(navController = navController)  // Aquí está tu pantalla de ajedrez
+        }
     }
 }
 
 @Composable
 fun Splash(onSplashCompleted: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
-
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -98,14 +118,13 @@ fun Splash(onSplashCompleted: () -> Unit = {}) {
         }
     }
 
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black),  // Fondo negro para el splash
         contentAlignment = Alignment.Center
     ) {
-        //logo
+        // Logo del juego
         Image(
             painter = painterResource(id = R.drawable.chess_logo),
             contentDescription = "Game Logo",
